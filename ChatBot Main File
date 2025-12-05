@@ -1,0 +1,106 @@
+
+
+
+# This is an experimental personal automation script for learning purposes only
+# It uses PyAutoGUI to automate WhatsApp Desktop for learning Python automation and works on full screen only.
+# It is not intended for large-scale messaging or violating WhatsApp’s Terms.
+# Enter the phone number at line 29 to start.
+
+
+
+
+import pyautogui
+import os
+import time 
+import openai
+import pyperclip
+from openai import APIConnectionError
+# ----------------------- SETUP -----------------------
+# AI client
+client = openai.OpenAI(
+    base_url="https://api.groq.com/openai/v1",
+    api_key=os.environ.get("GROQ_API_KEY")           #YOUR API KEY INPLACE  OF "GROQ_API_KEY"
+)
+
+# ----------------------- WHATSAPP -----------------------
+# Open WhatsApp
+os.startfile("WhatsApp:")
+time.sleep(3.5)
+
+# Search for contact/chat
+pyautogui.write(phone number, interval=0.25)      #Enter the phone number of the person whom you want to message
+pyautogui.click(557, 197)  # click on chat name
+time.sleep(1)
+
+# ----------------------- SETTINGS -----------------------
+LAST_MSG_X, LAST_MSG_Y = 647, 631  # last message location
+SAFE_X, SAFE_Y = 1335, 647         # safe zone for cursor
+BLACK_COLOR = (44, 44, 44)         # exact black color
+
+last_msg = ""  # track last message to avoid duplicates
+
+# Exact color check function
+def is_black(pixel_color):
+    return pixel_color == BLACK_COLOR
+
+# ----------------------- MAIN LOOP -----------------------
+while True:
+    try:
+        # ------------------- COLOR CHECK -------------------
+        pixel_color = pyautogui.pixel(LAST_MSG_X, LAST_MSG_Y)
+
+        # Move to safe zone only if exact black detected
+        if is_black(pixel_color):
+            pyautogui.moveTo(SAFE_X, SAFE_Y)
+            pyautogui.click(SAFE_X, SAFE_Y)
+            time.sleep(0.2)
+
+        # ------------------- READ LAST MESSAGE -------------------
+        pyautogui.moveTo(LAST_MSG_X, LAST_MSG_Y)
+        pyautogui.doubleClick(LAST_MSG_X, LAST_MSG_Y)                         
+        pyautogui.hotkey("ctrl", "c")
+        time.sleep(0.2)
+        user_msg = pyperclip.paste().strip()
+
+        # Skip empty or already processed messages
+        if user_msg == "" or user_msg == last_msg:
+            time.sleep(1)
+            continue
+
+        last_msg = user_msg
+
+        # ------------------- AI REPLY -------------------
+        success = False
+        while not success:
+            try:
+                response = client.chat.completions.create(
+                    model="openai/gpt-oss-120b",
+                    messages=[
+                        {"role": "system", "content": "You are a cheerful friend. Give short, friendly replies in Hinglish, 1-2 sentences."},
+                        {"role": "user", "content": user_msg}
+                    ]
+                )
+                ai_reply = response.choices[0].message.content.strip()
+                success = True
+            except APIConnectionError:
+                print("Connection failed. Retrying in 5 seconds...")
+                time.sleep(5)
+
+        # Fallback if AI reply is too short
+        if len(ai_reply) <= 1:
+            ai_reply = "Haha okay!"
+
+        # ------------------- SEND REPLY -------------------
+        pyautogui.click(SAFE_X, SAFE_Y)
+        pyautogui.write(ai_reply,interval="0.25")
+        pyautogui.press("enter")
+
+        # Small delay to avoid busy looping
+        time.sleep(1)
+
+    except KeyboardInterrupt:
+        print("Bot stopped manually.")
+        break
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        time.sleep(1)
