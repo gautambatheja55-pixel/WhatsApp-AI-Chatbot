@@ -1,3 +1,4 @@
+NO LONGER WORKS WITH THE LATEST WHATSAPP APP
 # WhatsApp Auto-Reply Bot
 
 A Python WhatsApp Auto-Reply Bot using **PyAutoGUI**, **Pyperclip**, and **Groq/OpenAI API**.  
